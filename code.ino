@@ -1,8 +1,18 @@
+#include <WhatabotAPIClient.h>
+
+
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <WiFiManager.h>
+// #include <WhatabotAPIClient.h>
 
 const char* ssid = "Mi";     // Your WiFi SSID
 const char* password = "shashank123"; // Your WiFi password
+#define WHATABOT_API_KEY "ba44fa77-4b96-4455-a3e2-912a610ac0a4"
+#define WHATABOT_CHAT_ID "9560180647"
+#define WHATABOT_PLATFORM "whatsapp"
 
 ESP8266WebServer server(80);
 
@@ -14,59 +24,36 @@ IPAddress dns(8, 8, 8, 8); // Set your DNS server
 bool loggedIn = false;
 String adminUsername = "admin";
 String adminPassword = "admin";
-String blockedIP = "192.168.1.10"; // Initially blocked IP
+String blockedIP = "192.168.2.108"; // Initially blocked IP
+
+int loginAttempts = 0;
+const int maxLoginAttempts = 2; // Maximum allowed login attempts
+WiFiManager wifiManager;
+WhatabotAPIClient whatabotClient(WHATABOT_API_KEY, WHATABOT_CHAT_ID, WHATABOT_PLATFORM);
+
 
 void handleRoot() {
-  if (!loggedIn) {
+  // Get the client's IP address
+  IPAddress clientIP = server.client().remoteIP();
+  
+  // Convert blockedIP string to IPAddress object
+  IPAddress blockedIPAddress;
+  if (!blockedIPAddress.fromString(blockedIP)) {
+    Serial.println("Invalid blockedIP address");
+    server.send(500, "text/plain", "Internal Server Error");
+    return;
+  }
+
+  // Check if the client's IP address is blocked
+  if (clientIP == blockedIPAddress) {
+    server.send(403, "text/plain", "Access Forbidden");
+    return;
+  }
+
+  // Check if the client's IP address is the same as the stored IP address
+  if (loggedIn) {
     String page = "<!DOCTYPE html>";
-    page += "<html lang='en'>";
-    page += "<head>";
-    page += "<meta charset='UTF-8'>";
-    page += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
-    page += "<title>Login</title>";
-    page += "<style>";
-    page += "body {";
-    page += "  font-family: Arial, sans-serif;";
-    page += "  display: flex;";
-    page += "  justify-content: center;";
-    page += "  align-items: center;";
-    page += "  height: 100vh;";
-    page += "  margin: 0;";
-    page += "}";
-    page += "form {";
-    page += "  background-color: #f2f2f2;";
-    page += "  padding: 20px;";
-    page += "  border-radius: 10px;";
-    page += "}";
-    page += "input[type='text'], input[type='password'], input[type='submit'] {";
-    page += "  width: 100%;";
-    page += "  padding: 10px;";
-    page += "  margin: 5px 0;";
-    page += "  display: inline-block;";
-    page += "  border: 1px solid #ccc;";
-    page += "  border-radius: 5px;";
-    page += "  box-sizing: border-box;";
-    page += "}";
-    page += "input[type='submit'] {";
-    page += "  background-color: #4CAF50;";
-    page += "  color: white;";
-    page += "  border: none;";
-    page += "}";
-    page += "</style>";
-    page += "</head>";
-    page += "<body>";
-    page += "<form action='/login' method='POST'>";
-    page += "<h2>Login</h2>";
-    page += "<input type='text' name='username' placeholder='Username'><br>";
-    page += "<input type='password' name='password' placeholder='Password'><br>";
-    page += "<input type='submit' value='Login'>";
-    page += "</form>";
-    page += "</body>";
-    page += "</html>";
-    server.send(200, "text/html", page);
-  } else {
-    String page = "<!DOCTYPE html>";
-    page += "<html lang='en'>";
+     page += "<html lang='en'>";
     page += "<head>";
     page += "<meta charset='UTF-8'>";
     page += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
@@ -108,9 +95,55 @@ void handleRoot() {
     page += "</body>";
     page += "</html>";
     server.send(200, "text/html", page);
+  } else {
+    String loginPage = "<!DOCTYPE html>";
+    loginPage += "<html lang='en'>";
+    loginPage += "<head>";
+    loginPage += "<meta charset='UTF-8'>";
+    loginPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+    loginPage += "<title>Login</title>";
+    loginPage += "<style>";
+    loginPage += "body {";
+    loginPage += "  font-family: Arial, sans-serif;";
+    loginPage += "  display: flex;";
+    loginPage += "  justify-content: center;";
+    loginPage += "  align-items: center;";
+    loginPage += "  height: 100vh;";
+    loginPage += "  margin: 0;";
+    loginPage += "}";
+    loginPage += "form {";
+    loginPage += "  background-color: #f2f2f2;";
+    loginPage += "  padding: 20px;";
+    loginPage += "  border-radius: 10px;";
+    loginPage += "}";
+    loginPage += "input[type='text'], input[type='password'], input[type='submit'] {";
+    loginPage += "  width: 100%;";
+    loginPage += "  padding: 10px;";
+    loginPage += "  margin: 5px 0;";
+    loginPage += "  display: inline-block;";
+    loginPage += "  border: 1px solid #ccc;";
+    loginPage += "  border-radius: 5px;";
+    loginPage += "  box-sizing: border-box;";
+    loginPage += "}";
+    loginPage += "input[type='submit'] {";
+    loginPage += "  background-color: #4CAF50;";
+    loginPage += "  color: white;";
+    loginPage += "  border: none;";
+    loginPage += "}";
+    loginPage += "</style>";
+    loginPage += "</head>";
+    loginPage += "<body>";
+    loginPage += "<form action='/login' method='POST'>";
+    loginPage += "<h2>Login</h2>";
+    loginPage += "<input type='text' name='username' placeholder='Username'><br>";
+    loginPage += "<input type='password' name='password' placeholder='Password'><br>";
+    loginPage += "<input type='submit' value='Login'>";
+    loginPage += "</form>";
+    loginPage += "</body>";
+    loginPage += "</html>";
+    server.send(200, "text/html", loginPage);
   }
 }
-
 
 void handleLogin() {
   if (server.hasArg("username") && server.hasArg("password")) {
@@ -118,14 +151,23 @@ void handleLogin() {
     String password = server.arg("password");
     if (username == adminUsername && password == adminPassword) {
       loggedIn = true;
+      loginAttempts = 0; // Reset login attempts on successful login
       handleRoot();
     } else {
-      server.send(401, "text/html", "Unauthorized");
+      loginAttempts++;
+      if (loginAttempts >= maxLoginAttempts) {
+        // Block the IP address and send WhatsApp message
+        blockedIP = server.client().remoteIP().toString();
+        whatabotClient.sendMessageREST("Login attempts exceeded from IP: " + blockedIP);
+        server.send(401, "text/html", "Unauthorized");
+      }
+      handleRoot();
     }
   } else {
     server.send(400, "text/html", "Bad Request");
   }
 }
+
 
 void allowIP() {
   if (loggedIn && server.hasArg("ip")) {
@@ -148,7 +190,6 @@ void blockIP() {
   }
 }
 
-
 void setup() {
   Serial.begin(9600);
   delay(10);
@@ -170,7 +211,10 @@ void setup() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-
+  // wifiManager.autoConnect(AP_SSID, AP_PASS);
+  whatabotClient.begin();
+  whatabotClient.onMessageReceived(onMessageReceived); 
+  whatabotClient.onServerResponseReceived(onServerResponseReceived);
   server.on("/", HTTP_GET, handleRoot);
   server.on("/login", HTTP_POST, handleLogin);
   server.on("/allow-ip", HTTP_POST, allowIP);
@@ -182,4 +226,14 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  whatabotClient.loop(); 
 }
+void onServerResponseReceived(String message) {
+  Serial.println(message); 
+}
+
+void onMessageReceived(String message) {
+  Serial.println(message);
+  whatabotClient.sendMessageWS("Pong: " + message);
+}
+             
