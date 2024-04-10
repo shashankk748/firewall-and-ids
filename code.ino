@@ -34,6 +34,7 @@ WhatabotAPIClient whatabotClient(WHATABOT_API_KEY, WHATABOT_CHAT_ID, WHATABOT_PL
 
 void handleRoot() {
   // Get the client's IP address
+ // Get the client's IP address
   IPAddress clientIP = server.client().remoteIP();
   
   // Convert blockedIP string to IPAddress object
@@ -45,7 +46,7 @@ void handleRoot() {
   }
 
   // Check if the client's IP address is blocked
-  if (clientIP == blockedIPAddress) {
+  if (blockedIPAddress == clientIP) {
     server.send(403, "text/plain", "Access Forbidden");
     return;
   }
@@ -168,27 +169,38 @@ void handleLogin() {
   }
 }
 
-
 void allowIP() {
   if (loggedIn && server.hasArg("ip")) {
-    blockedIP = server.arg("ip");
+    String ipToAllow = server.arg("ip");
+    // Remove the allowed IP address from the list of blocked IPs
+    if (blockedIP == ipToAllow) {
+      blockedIP = "";
+    }
     handleRoot();
   } else {
     server.sendHeader("Location", "/", true);   // Redirect to login page
     server.send(303);
   }
 }
+
 
 void blockIP() {
   if (loggedIn && server.hasArg("ip")) {
-    blockedIP = server.arg("ip");
-    // Here, you might want to add the blocked IP address to a list or perform any other necessary actions.
+    String ipToBlock = server.arg("ip");
+    // Check if blockedIP is empty
+    if (blockedIP.length() == 0) {
+      blockedIP = ipToBlock;
+    } else {
+      // Append the blocked IP address to the list of blocked IPs
+      blockedIP += "," + ipToBlock;
+    }
     handleRoot();
   } else {
     server.sendHeader("Location", "/", true);   // Redirect to login page
     server.send(303);
   }
 }
+
 
 void setup() {
   Serial.begin(9600);
