@@ -1,43 +1,37 @@
 #include <WhatabotAPIClient.h>
-
-
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <WiFiManager.h>
-// #include <WhatabotAPIClient.h>
 
-const char* ssid = "Mi";     // Your WiFi SSID
-const char* password = "shashank123"; // Your WiFi password
+const char* ssid = "Mi";     
+const char* password = "shashank123"; 
 #define WHATABOT_API_KEY "ba44fa77-4b96-4455-a3e2-912a610ac0a4"
 #define WHATABOT_CHAT_ID "9560180647"
 #define WHATABOT_PLATFORM "whatsapp"
 
 ESP8266WebServer server(80);
 
-IPAddress staticIP(192, 168, 1, 100); // Set your desired static IP address
+IPAddress staticIP(192, 168, 1, 100);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
-IPAddress dns(8, 8, 8, 8); // Set your DNS server
+IPAddress dns(8, 8, 8, 8);
 
 bool loggedIn = false;
 String adminUsername = "admin";
 String adminPassword = "admin";
-String blockedIP = "192.168.2.108"; // Initially blocked IP
+String blockedIP = "192.168.2.108";
 
 int loginAttempts = 0;
-const int maxLoginAttempts = 2; // Maximum allowed login attempts
+const int maxLoginAttempts = 2;
 WiFiManager wifiManager;
 WhatabotAPIClient whatabotClient(WHATABOT_API_KEY, WHATABOT_CHAT_ID, WHATABOT_PLATFORM);
 
 
 void handleRoot() {
-  // Get the client's IP address
- // Get the client's IP address
   IPAddress clientIP = server.client().remoteIP();
   
-  // Convert blockedIP string to IPAddress object
   IPAddress blockedIPAddress;
   if (!blockedIPAddress.fromString(blockedIP)) {
     Serial.println("Invalid blockedIP address");
@@ -45,13 +39,11 @@ void handleRoot() {
     return;
   }
 
-  // Check if the client's IP address is blocked
   if (blockedIPAddress == clientIP) {
     server.send(403, "text/plain", "Access Forbidden");
     return;
   }
 
-  // Check if the client's IP address is the same as the stored IP address
   if (loggedIn) {
     String page = "<!DOCTYPE html>";
      page += "<html lang='en'>";
@@ -152,12 +144,11 @@ void handleLogin() {
     String password = server.arg("password");
     if (username == adminUsername && password == adminPassword) {
       loggedIn = true;
-      loginAttempts = 0; // Reset login attempts on successful login
+      loginAttempts = 0; 
       handleRoot();
     } else {
       loginAttempts++;
       if (loginAttempts >= maxLoginAttempts) {
-        // Block the IP address and send WhatsApp message
         blockedIP = server.client().remoteIP().toString();
         whatabotClient.sendMessageREST("Login attempts exceeded from IP: " + blockedIP);
         server.send(401, "text/html", "Unauthorized");
@@ -172,41 +163,35 @@ void handleLogin() {
 void allowIP() {
   if (loggedIn && server.hasArg("ip")) {
     String ipToAllow = server.arg("ip");
-    // Remove the allowed IP address from the list of blocked IPs
     if (blockedIP == ipToAllow) {
       blockedIP = "";
     }
     handleRoot();
   } else {
-    server.sendHeader("Location", "/", true);   // Redirect to login page
+    server.sendHeader("Location", "/", true);   
     server.send(303);
   }
 }
-
 
 void blockIP() {
   if (loggedIn && server.hasArg("ip")) {
     String ipToBlock = server.arg("ip");
-    // Check if blockedIP is empty
     if (blockedIP.length() == 0) {
       blockedIP = ipToBlock;
     } else {
-      // Append the blocked IP address to the list of blocked IPs
       blockedIP += "," + ipToBlock;
     }
     handleRoot();
   } else {
-    server.sendHeader("Location", "/", true);   // Redirect to login page
+    server.sendHeader("Location", "/", true);   
     server.send(303);
   }
 }
-
 
 void setup() {
   Serial.begin(9600);
   delay(10);
 
-  // Connect to WiFi network
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
@@ -223,7 +208,7 @@ void setup() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-  // wifiManager.autoConnect(AP_SSID, AP_PASS);
+
   whatabotClient.begin();
   whatabotClient.onMessageReceived(onMessageReceived); 
   whatabotClient.onServerResponseReceived(onServerResponseReceived);
@@ -240,6 +225,7 @@ void loop() {
   server.handleClient();
   whatabotClient.loop(); 
 }
+
 void onServerResponseReceived(String message) {
   Serial.println(message); 
 }
@@ -248,4 +234,3 @@ void onMessageReceived(String message) {
   Serial.println(message);
   whatabotClient.sendMessageWS("Pong: " + message);
 }
-             
