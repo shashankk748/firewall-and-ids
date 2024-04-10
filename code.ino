@@ -27,15 +27,20 @@ int loginAttempts = 0;
 const int maxLoginAttempts = 2;
 WiFiManager wifiManager;
 WhatabotAPIClient whatabotClient(WHATABOT_API_KEY, WHATABOT_CHAT_ID, WHATABOT_PLATFORM);
-
+bool flag=true;
 
 void handleRoot() {
   IPAddress clientIP = server.client().remoteIP();
-  
+   if (blockedIP == clientIP.toString()) {
+    server.sendHeader("Location", "/login", true);
+    server.send(302, "text/plain", "");
+    return;
+  }
   IPAddress blockedIPAddress;
-  if (!blockedIPAddress.fromString(blockedIP)) {
+  if (flag==true && !blockedIPAddress.fromString(blockedIP)) {
     Serial.println("Invalid blockedIP address");
     server.send(500, "text/plain", "Internal Server Error");
+    flag=true;
     return;
   }
 
@@ -46,95 +51,142 @@ void handleRoot() {
 
   if (loggedIn) {
     String page = "<!DOCTYPE html>";
-     page += "<html lang='en'>";
-    page += "<head>";
-    page += "<meta charset='UTF-8'>";
-    page += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
-    page += "<title>Admin Panel</title>";
-    page += "<style>";
-    page += "body {";
-    page += "  font-family: Arial, sans-serif;";
-    page += "  background-color: #f2f2f2;";
-    page += "}";
-    page += ".container {";
-    page += "  width: 50%;";
-    page += "  margin: 0 auto;";
-    page += "  padding: 20px;";
-    page += "}";
-    page += "h2 {";
-    page += "  text-align: center;";
-    page += "}";
-    page += "p {";
-    page += "  text-align: center;";
-    page += "}";
-    page += "form {";
-    page += "  text-align: center;";
-    page += "}";
-    page += "</style>";
-    page += "</head>";
-    page += "<body>";
-    page += "<div class='container'>";
-    page += "<h2>Welcome, Admin!</h2>";
-    page += "<p>Blocked IP: " + blockedIP + "</p>";
-    page += "<form action='/allow-ip' method='POST'>";
-    page += "<input type='text' name='ip' placeholder='IP Address to Allow'><br>";
-    page += "<input type='submit' value='Allow'>";
-    page += "</form>";
-    page += "<form action='/block-ip' method='POST'>";
-    page += "<input type='text' name='ip' placeholder='IP Address to Block'><br>";
-    page += "<input type='submit' value='Block'>";
-    page += "</form>";
-    page += "</div>";
-    page += "</body>";
-    page += "</html>";
+page += "<html lang='en'>";
+page += "<head>";
+page += "<meta charset='UTF-8'>";
+page += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+page += "<title>Admin Panel</title>";
+page += "<style>";
+page += "body {";
+page += "  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;";
+page += "  background-color: #f7f7f7;";
+page += "  display: flex;";
+page += "  justify-content: center;";
+page += "  align-items: center;";
+page += "  height: 100vh;";
+page += "  margin: 0;";
+page += "}";
+page += ".container {";
+page += "  width: 320px;";
+page += "  padding: 20px;";
+page += "  background-color: #fff;";
+page += "  border-radius: 10px;";
+page += "  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);";
+page += "}";
+page += "h2 {";
+page += "  text-align: center;";
+page += "  margin-bottom: 20px;";
+page += "  color: #333;";
+page += "}";
+page += "p {";
+page += "  text-align: center;";
+page += "  margin-bottom: 20px;";
+page += "  color: #666;";
+page += "}";
+page += "form {";
+page += "  text-align: center;";
+page += "}";
+page += "input[type='text'], input[type='submit'] {";
+page += "  width: calc(100% - 22px);";
+page += "  padding: 10px;";
+page += "  margin: 10px 0;";
+page += "  display: block;";
+page += "  border: 1px solid #ccc;";
+page += "  border-radius: 5px;";
+page += "  box-sizing: border-box;";
+page += "}";
+page += "input[type='submit'] {";
+page += "  background-color: #4CAF50;";
+page += "  color: white;";
+page += "  position: relative;";
+page += "  border: none;";
+page += "  width: 50%;";
+page += "  left: 25%;";
+page += "  border-radius: 5px;";
+page += "  font-size: 14px;";
+page += "  cursor: pointer;";
+page += "  transition: background-color 0.3s ease;";
+page += "}";
+page += "input[type='submit']:hover {";
+page += "  background-color: #45a049;";
+page += "}";
+page += "</style>";
+page += "</head>";
+page += "<body>";
+page += "<div class='container'>";
+page += "<h2>Welcome, Admin!</h2>";
+page += "<p>Blocked IP: " + blockedIP + "</p>";
+page += "<form action='/allow-ip' method='POST'>";
+page += "<input type='text' name='ip' placeholder='IP Address to Allow'>";
+page += "<input type='submit' value='Allow'>";
+page += "</form>";
+page += "<form action='/block-ip' method='POST'>";
+page += "<input type='text' name='ip' placeholder='IP Address to Block'>";
+page += "<input type='submit' value='Block'>";
+page += "</form>";
+page += "</div>";
+page += "</body>";
+page += "</html>";
+
     server.send(200, "text/html", page);
   } else {
     String loginPage = "<!DOCTYPE html>";
-    loginPage += "<html lang='en'>";
-    loginPage += "<head>";
-    loginPage += "<meta charset='UTF-8'>";
-    loginPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
-    loginPage += "<title>Login</title>";
-    loginPage += "<style>";
-    loginPage += "body {";
-    loginPage += "  font-family: Arial, sans-serif;";
-    loginPage += "  display: flex;";
-    loginPage += "  justify-content: center;";
-    loginPage += "  align-items: center;";
-    loginPage += "  height: 100vh;";
-    loginPage += "  margin: 0;";
-    loginPage += "}";
-    loginPage += "form {";
-    loginPage += "  background-color: #f2f2f2;";
-    loginPage += "  padding: 20px;";
-    loginPage += "  border-radius: 10px;";
-    loginPage += "}";
-    loginPage += "input[type='text'], input[type='password'], input[type='submit'] {";
-    loginPage += "  width: 100%;";
-    loginPage += "  padding: 10px;";
-    loginPage += "  margin: 5px 0;";
-    loginPage += "  display: inline-block;";
-    loginPage += "  border: 1px solid #ccc;";
-    loginPage += "  border-radius: 5px;";
-    loginPage += "  box-sizing: border-box;";
-    loginPage += "}";
-    loginPage += "input[type='submit'] {";
-    loginPage += "  background-color: #4CAF50;";
-    loginPage += "  color: white;";
-    loginPage += "  border: none;";
-    loginPage += "}";
-    loginPage += "</style>";
-    loginPage += "</head>";
-    loginPage += "<body>";
-    loginPage += "<form action='/login' method='POST'>";
-    loginPage += "<h2>Login</h2>";
-    loginPage += "<input type='text' name='username' placeholder='Username'><br>";
-    loginPage += "<input type='password' name='password' placeholder='Password'><br>";
-    loginPage += "<input type='submit' value='Login'>";
-    loginPage += "</form>";
-    loginPage += "</body>";
-    loginPage += "</html>";
-    server.send(200, "text/html", loginPage);
+loginPage += "<html lang='en'>";
+loginPage += "<head>";
+loginPage += "<meta charset='UTF-8'>";
+loginPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+loginPage += "<title>Login</title>";
+loginPage += "<style>";
+loginPage += "body {";
+loginPage += "  font-family: Arial, sans-serif;";
+loginPage += "  background-color: #f7f7f7;";
+loginPage += "  display: flex;";
+loginPage += "  justify-content: center;";
+loginPage += "  align-items: center;";
+loginPage += "  height: 100vh;";
+loginPage += "  margin: 0;";
+loginPage += "}";
+loginPage += ".login-container {";
+loginPage += "  width: 320px;";
+loginPage += "  padding: 20px;";
+loginPage += "  background-color: #fff;";
+loginPage += "  border-radius: 10px;";
+loginPage += "  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);";
+loginPage += "}";
+loginPage += "input[type='text'], input[type='password'], input[type='submit'] {";
+loginPage += "  width: 100%;";
+loginPage += "  padding: 10px;";
+loginPage += "  margin: 10px 0;";
+loginPage += "  display: block;";
+loginPage += "  border: 1px solid #ccc;";
+loginPage += "  border-radius: 5px;";
+loginPage += "  box-sizing: border-box;";
+loginPage += "}";
+loginPage += "input[type='submit'] {";
+loginPage += "  background-color: #4CAF50;";
+loginPage += "  color: white;";
+loginPage += "  border: none;";
+loginPage += "  cursor: pointer;";
+loginPage += "}";
+loginPage += ".login-title {";
+loginPage += "  text-align: center;";
+loginPage += "  margin-bottom: 20px;";
+loginPage += "}";
+loginPage += "</style>";
+loginPage += "</head>";
+loginPage += "<body>";
+loginPage += "<div class='login-container'>";
+loginPage += "<h2 class='login-title'>Login</h2>";
+loginPage += "<form action='/login' method='POST'>";
+loginPage += "<input type='text' name='username' placeholder='Username'><br>";
+loginPage += "<input type='password' name='password' placeholder='Password'><br>";
+loginPage += "<input type='submit' value='Login'>";
+loginPage += "</form>";
+loginPage += "</div>";
+loginPage += "</body>";
+loginPage += "</html>";
+server.send(200, "text/html", loginPage);
+
   }
 }
 
@@ -165,6 +217,7 @@ void allowIP() {
     String ipToAllow = server.arg("ip");
     if (blockedIP == ipToAllow) {
       blockedIP = "";
+      flag=false;
     }
     handleRoot();
   } else {
@@ -181,6 +234,7 @@ void blockIP() {
     } else {
       blockedIP += "," + ipToBlock;
     }
+    flag=false;
     handleRoot();
   } else {
     server.sendHeader("Location", "/", true);   
@@ -223,7 +277,7 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  whatabotClient.loop(); 
+  // whatabotClient.loop(); 
 }
 
 void onServerResponseReceived(String message) {
