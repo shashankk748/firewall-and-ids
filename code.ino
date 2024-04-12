@@ -1,4 +1,3 @@
-#include <WhatabotAPIClient.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
@@ -7,9 +6,7 @@
 
 const char* ssid = "Mi";     
 const char* password = "shashank123"; 
-#define WHATABOT_API_KEY "ba44fa77-4b96-4455-a3e2-912a610ac0a4"
-#define WHATABOT_CHAT_ID "9560180647"
-#define WHATABOT_PLATFORM "whatsapp"
+
 
 ESP8266WebServer server(80);
 
@@ -17,7 +14,8 @@ IPAddress staticIP(192, 168, 1, 100);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(8, 8, 8, 8);
-
+String phoneNumber = "REPLACE_WITH_YOUR_PHONE_NUMBER";
+String apiKey = "REPLACE_WITH_API_KEY";
 bool loggedIn = false;
 String adminUsername = "admin";
 String adminPassword = "admin";
@@ -26,7 +24,6 @@ String blockedIP = "192.168.2.108";
 int loginAttempts = 0;
 const int maxLoginAttempts = 2;
 WiFiManager wifiManager;
-WhatabotAPIClient whatabotClient(WHATABOT_API_KEY, WHATABOT_CHAT_ID, WHATABOT_PLATFORM);
 bool flag=true;
 
 void handleRoot() {
@@ -202,7 +199,6 @@ void handleLogin() {
       loginAttempts++;
       if (loginAttempts >= maxLoginAttempts) {
         blockedIP = server.client().remoteIP().toString();
-        whatabotClient.sendMessageREST("Login attempts exceeded from IP: " + blockedIP);
         server.send(401, "text/html", "Unauthorized");
       }
       handleRoot();
@@ -263,9 +259,6 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  whatabotClient.begin();
-  whatabotClient.onMessageReceived(onMessageReceived); 
-  whatabotClient.onServerResponseReceived(onServerResponseReceived);
   server.on("/", HTTP_GET, handleRoot);
   server.on("/login", HTTP_POST, handleLogin);
   server.on("/allow-ip", HTTP_POST, allowIP);
@@ -277,14 +270,7 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  // whatabotClient.loop(); 
+
 }
 
-void onServerResponseReceived(String message) {
-  Serial.println(message); 
-}
 
-void onMessageReceived(String message) {
-  Serial.println(message);
-  whatabotClient.sendMessageWS("Pong: " + message);
-}
