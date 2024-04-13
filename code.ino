@@ -14,12 +14,12 @@ IPAddress staticIP(192, 168, 1, 100);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(8, 8, 8, 8);
-String phoneNumber = "REPLACE_WITH_YOUR_PHONE_NUMBER";
-String apiKey = "REPLACE_WITH_API_KEY";
+// String phoneNumber = "REPLACE_WITH_YOUR_PHONE_NUMBER";
+// String apiKey = "REPLACE_WITH_API_KEY";
 bool loggedIn = false;
 String adminUsername = "admin";
 String adminPassword = "admin";
-String blockedIP = "192.168.2.108";
+String blockedIP = "192.168.121.153";
 
 int loginAttempts = 0;
 const int maxLoginAttempts = 2;
@@ -27,17 +27,45 @@ WiFiManager wifiManager;
 bool flag=true;
 
 void handleRoot() {
+  // IPAddress clientIP = server.client().remoteIP();
   IPAddress clientIP = server.client().remoteIP();
-   if (blockedIP == clientIP.toString()) {
+
+// Split the blockedIP string into individual IP addresses
+  int startPos = 0;
+  int endPos = blockedIP.indexOf(',');
+  String ip;
+
+  // Iterate through each IP address
+  while (endPos != -1) {
+    ip = blockedIP.substring(startPos, endPos);
+    ip.trim();
+
+    // Check if the client's IP matches any of the blocked IP addresses
+    if (clientIP.toString() == ip) {
+      server.sendHeader("Location", "/login", true);
+      server.send(302, "text/plain", "");
+      return;
+    }
+
+    // Move to the next IP address
+    startPos = endPos + 1;
+    endPos = blockedIP.indexOf(',', startPos);
+  }
+
+  // Check the last IP address in the string
+  ip = blockedIP.substring(startPos);
+  ip.trim();
+  if (clientIP.toString() == ip) {
     server.sendHeader("Location", "/login", true);
     server.send(302, "text/plain", "");
     return;
   }
+
   IPAddress blockedIPAddress;
-  if (flag==true && !blockedIPAddress.fromString(blockedIP)) {
+  if (flag == true && !blockedIPAddress.fromString(blockedIP)) {
     Serial.println("Invalid blockedIP address");
     server.send(500, "text/plain", "Internal Server Error");
-    flag=true;
+    flag = true;
     return;
   }
 
@@ -45,6 +73,8 @@ void handleRoot() {
     server.send(403, "text/plain", "Access Forbidden");
     return;
   }
+
+
 
   if (loggedIn) {
     String page = "<!DOCTYPE html>";
@@ -209,19 +239,18 @@ void handleLogin() {
 }
 
 void allowIP() {
-  if (loggedIn && server.hasArg("ip")) {
+  if (server.hasArg("ip")) {
     String ipToAllow = server.arg("ip");
-    if (blockedIP == ipToAllow) {
-      blockedIP = "";
-      flag=false;
-    }
+    blockedIP.replace(ipToAllow + ",", ""); // Remove the IP from the list
+    blockedIP.replace("," + ipToAllow, ""); // Remove the IP from the list
+    blockedIP.replace(ipToAllow, ""); // Remove the IP if it's the only one
+    flag=false;
     handleRoot();
   } else {
     server.sendHeader("Location", "/", true);   
     server.send(303);
   }
 }
-
 void blockIP() {
   if (loggedIn && server.hasArg("ip")) {
     String ipToBlock = server.arg("ip");
