@@ -19,10 +19,10 @@ IPAddress dns(8, 8, 8, 8);
 bool loggedIn = false;
 String adminUsername = "admin";
 String adminPassword = "admin";
-String blockedIP = "192.168.121.153";
+String blockedIP = "";
 
 int loginAttempts = 0;
-const int maxLoginAttempts = 2;
+const int maxLoginAttempts = 3;
 WiFiManager wifiManager;
 bool flag=true;
 // String loggedInIPs = ""; 
