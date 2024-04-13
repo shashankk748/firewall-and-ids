@@ -25,10 +25,53 @@ int loginAttempts = 0;
 const int maxLoginAttempts = 2;
 WiFiManager wifiManager;
 bool flag=true;
+// String loggedInIPs = ""; 
+
+String loggedInIPs = ""; // String to store IPs of logged-in users separated by comma
 
 void handleRoot() {
-  // IPAddress clientIP = server.client().remoteIP();
   IPAddress clientIP = server.client().remoteIP();
+
+  // Check if the client's IP is in the list of logged-in IPs
+  bool loggedIn = false;
+  if (loggedInIPs.length() > 0) {
+    int startPos = 0;
+    int endPos = loggedInIPs.indexOf(',');
+    String ip;
+
+    // Iterate through each IP address
+    while (endPos != -1) {
+      ip = loggedInIPs.substring(startPos, endPos);
+      ip.trim();
+
+      // Check if the client's IP matches any of the logged-in IPs
+      if (clientIP.toString() == ip) {
+        loggedIn = true;
+        break;
+      }
+
+      // Move to the next IP address
+      startPos = endPos + 1;
+      endPos = loggedInIPs.indexOf(',', startPos);
+    }
+
+    // Check the last IP address in the string
+    ip = loggedInIPs.substring(startPos);
+    ip.trim();
+    if (clientIP.toString() == ip) {
+      loggedIn = true;
+    }
+  }
+
+  if (server.hasArg("username") && server.hasArg("password")) {
+    // Check login credentials
+    String username = server.arg("username");
+    String password = server.arg("password");
+    if (username == adminUsername && password == adminPassword) {
+      loggedInIPs += clientIP.toString() + ",";
+      loggedIn = true;
+    }
+  }
 
 // Split the blockedIP string into individual IP addresses
   int startPos = 0;
