@@ -7,6 +7,7 @@
 const char* ssid = "Mi";     
 const char* password = "shashank123"; 
 
+void notify_send();
 
 ESP8266WebServer server(80);
 
@@ -14,12 +15,13 @@ IPAddress staticIP(192, 168, 1, 100);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(8, 8, 8, 8);
+
 // String phoneNumber = "REPLACE_WITH_YOUR_PHONE_NUMBER";
 // String apiKey = "REPLACE_WITH_API_KEY";
 bool loggedIn = false;
 String adminUsername = "admin";
 String adminPassword = "admin";
-String blockedIP = "";
+String blockedIP = "192.168.121.105";
 
 int loginAttempts = 0;
 const int maxLoginAttempts = 3;
@@ -272,6 +274,7 @@ void handleLogin() {
       loginAttempts++;
       if (loginAttempts >= maxLoginAttempts) {
         blockedIP = server.client().remoteIP().toString();
+        notify_send();
         server.send(401, "text/html", "Unauthorized");
       }
       handleRoot();
@@ -346,3 +349,68 @@ void loop() {
 }
 
 
+//Your Domain name with URL path or IP address with path
+String serverName = "http://192.168.121.108:5000/";
+
+// the following variables are unsigned longs because the time, measured in
+// milliseconds, will quickly become a bigger number than can be stored in an int.
+// unsigned long lastTime = 0;
+// Timer set to 10 minutes (600000)
+//unsigned long timerDelay = 600000;
+// Set timer to 5 seconds (5000)
+// unsigned long timerDelay = 5000;
+
+// void setup() {
+//   Serial.begin(9600); 
+
+//   WiFi.begin(ssid, password);
+//   Serial.println("Connecting");
+//   while(WiFi.status() != WL_CONNECTED) {
+//     delay(500);
+//     Serial.print(".");
+//   }
+//   Serial.println("");
+//   Serial.print("Connected to WiFi network with IP Address: ");
+//   Serial.println(WiFi.localIP());
+ 
+//   Serial.println("Timer set to 5 seconds (timerDelay variable), it will take 5 seconds before publishing the first reading.");
+// }
+
+void notify_send() {
+  // Send an HTTP POST request depending on timerDelay
+  // if ((millis() - lastTime) > timerDelay) {
+    //Check WiFi connection status
+    if(WiFi.status()== WL_CONNECTED){
+      WiFiClient client;
+      HTTPClient http;
+
+      String serverPath = serverName;
+      
+      // Your Domain name with URL path or IP address with path
+      http.begin(client, serverPath.c_str());
+  
+      // If you need Node-RED/server authentication, insert user and password below
+      //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
+        
+      // Send HTTP GET request
+      int httpResponseCode = http.GET();
+      
+      if (httpResponseCode>0) {
+        Serial.print("HTTP Response code: ");
+        Serial.println(httpResponseCode);
+        String payload = http.getString();
+        Serial.println(payload);
+      }
+      else {
+        Serial.print("Error code: ");
+        Serial.println(httpResponseCode);
+      }
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+    // lastTime = millis();
+  // }
+}
