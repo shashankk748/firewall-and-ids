@@ -64,7 +64,7 @@ void handleRoot() {
       loggedIn = true;
     }
   }
-
+  
   if (server.hasArg("username") && server.hasArg("password")) {
     // Check login credentials
     String username = server.arg("username");
@@ -272,10 +272,68 @@ void handleLogin() {
       handleRoot();
     } else {
       loginAttempts++;
+        String ipToBlock = server.client().remoteIP().toString();
       if (loginAttempts >= maxLoginAttempts) {
-        blockedIP = server.client().remoteIP().toString();
+        if (blockedIP.length() == 0) {
+      blockedIP = ipToBlock;
+    } else {
+      blockedIP += "," + ipToBlock;
+    }
+    flag=false;
         notify_send();
-        server.send(401, "text/html", "Unauthorized");
+        // server.on("/block-ip", HTTP_POST, blockIP);
+        String blockedPage = "<!DOCTYPE html>";
+    blockedPage += "<html lang='en'>";
+    blockedPage += "<head>";
+    blockedPage += "<meta charset='UTF-8'>";
+    blockedPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+    blockedPage += "<title>Blocked</title>";
+    blockedPage += "<style>";
+    blockedPage += "body {";
+  blockedPage += "  margin: 0;";
+  blockedPage += "  padding: 0;";
+  blockedPage += "  font-family: Arial, sans-serif;";
+  blockedPage += "  height: 100vh;";
+  blockedPage += "  display: flex;";
+  blockedPage += "  justify-content: center;";
+  blockedPage += "  align-items: center;";
+  blockedPage += "  background-color: #f5f5f5;";
+  blockedPage += "}";
+  blockedPage += ".message {";
+  blockedPage += "  text-align: center;";
+  blockedPage += "  background-color: #fff;";
+  blockedPage += "  /* padding: 20px; */";
+  blockedPage += "  border-radius: 5px;";
+  blockedPage += "  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);";
+  blockedPage += "}";
+  blockedPage += ".card{";
+  blockedPage += "  padding:20px;";
+  blockedPage += "}";
+  blockedPage += ".alert {";
+  blockedPage += "  background-color: #eea300;";
+  blockedPage += "  color: #ffffff;";
+  blockedPage += "  padding: 10px;";
+  blockedPage += "  border-radius: 5px 5px 0 0;";
+  blockedPage += "}";
+  blockedPage += ".footer {";
+  blockedPage += "  position: fixed;";
+  blockedPage += "  font-size: 12px;";
+  blockedPage += "  color: #666;";
+  blockedPage += "}";
+    blockedPage += "</style>";
+    blockedPage += "</head>";
+    blockedPage += "<body>";
+    blockedPage += "<div class='message'>";
+    blockedPage += "<div class='alert'><h2>Alert!</h2></div>";
+    blockedPage += "<div class='card'>";
+    blockedPage += "<h2><br>Too Many Requests</h2>";
+    blockedPage += "<p>You have been blocked. Kindly contact the admin.</p>";
+    blockedPage += "</div>";
+    blockedPage += "</div>";
+    blockedPage += "<div class='footer'>ISM Group 15</div>";
+    blockedPage += "</body>";
+    blockedPage += "</html>";
+        server.send(401, "text/html", blockedPage);
       }
       handleRoot();
     }
